@@ -23,3 +23,11 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Runtime generated files
+backend/uploads/
+backend/vectorstore/
+
+# Optional
+*.faiss
+*.pkl
