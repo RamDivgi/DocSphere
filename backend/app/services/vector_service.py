@@ -1,11 +1,16 @@
 from pathlib import Path
+import os
 
 from langchain_community.vectorstores import FAISS
 
 from app.services.embedding_service import EmbeddingService
 
-VECTOR_DIR = Path("vectorstore")
-VECTOR_DIR.mkdir(exist_ok=True)
+# Base storage path
+BASE_STORAGE = Path(os.getenv("STORAGE_PATH", "."))
+
+# Vector storage directory
+VECTOR_DIR = BASE_STORAGE / "vectorstore"
+VECTOR_DIR.mkdir(parents=True, exist_ok=True)
 
 
 class VectorService:

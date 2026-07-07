@@ -31,3 +31,21 @@ backend/vectorstore/
 # Optional
 *.faiss
 *.pkl
+
+# Python
+*.pyc
+*.pyo
+
+# Logs
+*.log
+
+# Build
+dist/
+
+# Coverage
+.coverage
+htmlcov/
+
+# macOS / Windows
+.DS_Store
+Thumbs.db

@@ -1,10 +1,15 @@
 from pathlib import Path
+import os
 import uuid
-import fitz
 
+import fitz
 from fastapi import UploadFile, HTTPException
 
-UPLOAD_DIR = Path("uploads/pdfs")
+# Base storage path
+BASE_STORAGE = Path(os.getenv("STORAGE_PATH", "."))
+
+# Upload directory
+UPLOAD_DIR = BASE_STORAGE / "uploads" / "pdfs"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -52,6 +57,7 @@ class PDFService:
                 path.unlink()
             except Exception:
                 pass
+
             raise HTTPException(
                 status_code=400,
                 detail="PDF contains no extractable text. Please upload a digital PDF with selectable text."
