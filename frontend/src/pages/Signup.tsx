@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Loader2, UserPlus } from "lucide-react";
+import { Loader2, UserPlus, Eye, EyeOff } from "lucide-react";
 import { signup } from "../services/authService";
 
 export default function Signup() {
@@ -11,6 +11,7 @@ export default function Signup() {
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
@@ -34,10 +35,15 @@ export default function Signup() {
 
             navigate("/login");
         } catch (err: any) {
-            setError(
-                err.response?.data?.detail ??
-                "Signup failed. Please try again."
-            );
+            let errorMsg = "Signup failed. Please try again.";
+            if (err?.response?.data?.detail) {
+                if (typeof err.response.data.detail === "string") {
+                    errorMsg = err.response.data.detail;
+                } else if (Array.isArray(err.response.data.detail)) {
+                    errorMsg = err.response.data.detail.map((d: any) => d.msg).join(", ");
+                }
+            }
+            setError(errorMsg);
         } finally {
             setLoading(false);
         }
@@ -140,33 +146,43 @@ export default function Signup() {
                         <label htmlFor="password" className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
                             Password
                         </label>
-                        <input
-                            id="password"
-                            type="password"
-                            required
-                            disabled={loading}
-                            className="
-                                w-full
-                                rounded-xl
-                                bg-slate-900/50
-                                border
-                                border-slate-800
-                                hover:border-slate-700
-                                focus:border-blue-500
-                                focus:ring-1
-                                focus:ring-blue-500
-                                p-3.5
-                                outline-none
-                                text-sm
-                                text-slate-100
-                                placeholder-slate-500
-                                transition
-                                disabled:opacity-50
-                            "
-                            placeholder="Min. 8 characters"
-                            value={password}
-                            onChange={handlePasswordChange}
-                        />
+                        <div className="relative">
+                            <input
+                                id="password"
+                                type={showPassword ? "text" : "password"}
+                                required
+                                disabled={loading}
+                                className="
+                                    w-full
+                                    rounded-xl
+                                    bg-slate-900/50
+                                    border
+                                    border-slate-800
+                                    hover:border-slate-700
+                                    focus:border-blue-500
+                                    focus:ring-1
+                                    focus:ring-blue-500
+                                    p-3.5
+                                    pr-11
+                                    outline-none
+                                    text-sm
+                                    text-slate-100
+                                    placeholder-slate-500
+                                    transition
+                                    disabled:opacity-50
+                                "
+                                placeholder="Min. 8 characters"
+                                value={password}
+                                onChange={handlePasswordChange}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition"
+                            >
+                                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                            </button>
+                        </div>
                     </div>
 
                     {error && (
