@@ -68,3 +68,16 @@
 .animate-typing {
   animation: typing 2.5s steps(30, end) infinite alternate;
 }
+
+@keyframes progress {
+  0% {
+    left: -60%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+.animate-progress {
+  animation: progress 1.5s infinite linear;
+}
