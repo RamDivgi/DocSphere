@@ -26,7 +26,7 @@ api.interceptors.response.use(
                 (error.response.status === 400 &&
                     error.response.data?.detail?.includes("session")))
         ) {
-            localStorage.removeItem("name");
+            localStorage.removeItem("session_name");
             localStorage.removeItem("session_id");
 
             if (window.location.pathname !== "/") {

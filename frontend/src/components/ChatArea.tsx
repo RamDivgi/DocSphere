@@ -103,7 +103,7 @@ export default function ChatArea() {
                     err?.response?.data?.detail?.includes("session"))
             ) {
                 addToast("Session expired or invalid. Resetting onboarding...", "error");
-                localStorage.removeItem("name");
+                localStorage.removeItem("session_name");
                 localStorage.removeItem("session_id");
                 window.location.href = "/";
             } else {
@@ -206,7 +206,7 @@ export default function ChatArea() {
     }
 
     if (!selectedDocumentId) {
-        const name = localStorage.getItem("name") || "User";
+        const name = localStorage.getItem("session_name") || "User";
         return (
             <div className="flex-1 flex flex-col items-center justify-center p-6 bg-[#202123] h-full overflow-y-auto relative">
                 {/* Background ambient glow */}
