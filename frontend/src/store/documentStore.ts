@@ -1,65 +1,50 @@
 import { create } from "zustand";
-
 import { getDocuments } from "../services/documentService";
-
+import { useChatStore } from "./chatStore";
 import type { Document } from "../types/document";
 
 interface DocumentStore {
-
     documents: Document[];
-
     loading: boolean;
-
     loadDocuments: () => Promise<void>;
-
     addDocument: (doc: Document) => void;
-
 }
 
-export const useDocumentStore =
-    create<DocumentStore>((set) => ({
+export const useDocumentStore = create<DocumentStore>((set) => ({
+    documents: [],
+    loading: false,
 
-        documents: [],
+    loadDocuments: async () => {
+        set({
+            loading: true,
+        });
 
-        loading: false,
-
-        loadDocuments: async () => {
+        try {
+            const docs = await getDocuments();
 
             set({
-                loading: true,
+                documents: docs,
+                loading: false,
             });
 
-            try {
-
-                const docs =
-                    await getDocuments();
-
-                set({
-                    documents: docs,
-                    loading: false,
-                });
-
-            } catch (err) {
-
-                console.error(err);
-
-                set({
-                    loading: false,
-                });
-
+            // Clean up stale document selection
+            const { selectedDocumentId, clearDocument } = useChatStore.getState();
+            if (selectedDocumentId && !docs.some((d) => d.id === selectedDocumentId)) {
+                clearDocument();
             }
+        } catch (err) {
+            console.error(err);
+            set({
+                loading: false,
+            });
+        }
+    },
 
-        },
-
-        addDocument: (doc) =>
-
-            set((state) => ({
-
-                documents: [
-                    doc,
-                    ...state.documents,
-                ],
-
-            })),
-
-    }));
+    addDocument: (doc) =>
+        set((state) => ({
+            documents: [
+                doc,
+                ...state.documents,
+            ],
+        })),
+}));

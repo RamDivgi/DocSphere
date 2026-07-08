@@ -32,6 +32,14 @@ export default function ChatArea() {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages, loading]);
 
+    // Clean up selected conversation if it belongs to a different document
+    useEffect(() => {
+        if (selectedConversation && selectedConversation.document_id !== selectedDocumentId) {
+            setSelectedConversation(null);
+            setMessages([]);
+        }
+    }, [selectedDocumentId, selectedConversation, setSelectedConversation, setMessages]);
+
     // Load messages whenever selected conversation changes
     useEffect(() => {
         async function loadMessages() {

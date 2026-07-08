@@ -5,6 +5,7 @@ import { Menu, X, ChevronLeft, ChevronRight, LogOut, Plus, Brain, AlertCircle, C
 import { useChatStore } from "../store/chatStore";
 import { useConversationStore } from "../store/conversationStore";
 import { useDocumentStore } from "../store/documentStore";
+import { useSessionStore } from "../store/sessionStore";
 import api from "../lib/axios";
 
 import ConversationSidebar from "../components/ConversationSidebar";
@@ -16,15 +17,16 @@ export default function Dashboard() {
     const navigate = useNavigate();
     const { selectedDocumentId, clearDocument } = useChatStore();
     const { setSelectedConversation, setMessages, setConversations, clearConversation, toasts, removeToast, addToast } = useConversationStore();
+    const { session_id, session_name, clearSession } = useSessionStore();
 
     // Check session
-    const name = localStorage.getItem("session_name") || "User";
+    const name = session_name || "User";
 
     useEffect(() => {
-        if (!localStorage.getItem("session_name") || !localStorage.getItem("session_id")) {
+        if (!session_id || !session_name) {
             navigate("/", { replace: true });
         }
-    }, [navigate]);
+    }, [session_id, session_name, navigate]);
 
     // Responsive layout states
     const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -48,14 +50,15 @@ export default function Dashboard() {
             console.error("Failed to delete session on backend:", err);
         }
 
-        localStorage.removeItem("session_name");
-        localStorage.removeItem("session_id");
-
-        // Clear stores state
+        // Clear all stores state
+        clearSession();
         clearDocument();
         clearConversation();
         setConversations([]);
         useDocumentStore.setState({ documents: [] });
+
+        // Wipe local storage completely
+        localStorage.clear();
 
         addToast("Session reset successfully.", "info");
         navigate("/");

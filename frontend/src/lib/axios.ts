@@ -1,4 +1,8 @@
 import axios from "axios";
+import { useSessionStore } from "../store/sessionStore";
+import { useChatStore } from "../store/chatStore";
+import { useConversationStore } from "../store/conversationStore";
+import { useDocumentStore } from "../store/documentStore";
 
 const api = axios.create({
     baseURL: `${import.meta.env.VITE_API_URL}/api/v1`,
@@ -8,7 +12,7 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-    const sessionId = localStorage.getItem("session_id");
+    const sessionId = useSessionStore.getState().session_id;
 
     if (sessionId) {
         config.headers["X-Session-ID"] = sessionId;
@@ -26,8 +30,15 @@ api.interceptors.response.use(
                 (error.response.status === 400 &&
                     error.response.data?.detail?.includes("session")))
         ) {
-            localStorage.removeItem("session_name");
-            localStorage.removeItem("session_id");
+            // Clear all local states
+            useSessionStore.getState().clearSession();
+            useChatStore.getState().clearDocument();
+            useConversationStore.getState().clearConversation();
+            useConversationStore.getState().setConversations([]);
+            useDocumentStore.setState({ documents: [] });
+            
+            // Clear raw localStorage just in case
+            localStorage.clear();
 
             if (window.location.pathname !== "/") {
                 window.location.href = "/";

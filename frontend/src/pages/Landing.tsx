@@ -1,20 +1,20 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Brain, Sparkles, AlertCircle, MessageSquare, FileText, Search, Layers, ArrowRight } from "lucide-react";
+import { useSessionStore } from "../store/sessionStore";
 
 export default function Landing() {
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [error, setError] = useState("");
+  const { session_id, session_name, setSession } = useSessionStore();
 
   // Redirect to dashboard if session already exists
   useEffect(() => {
-    const savedName = localStorage.getItem("session_name");
-    const savedSession = localStorage.getItem("session_id");
-    if (savedName && savedSession) {
+    if (session_name && session_id) {
       navigate("/dashboard", { replace: true });
     }
-  }, [navigate]);
+  }, [session_name, session_id, navigate]);
 
   function handleStart(e: React.FormEvent) {
     e.preventDefault();
@@ -26,10 +26,8 @@ export default function Landing() {
     }
 
     // Save name and session ID
-    localStorage.setItem("session_name", trimmedName);
-    if (!localStorage.getItem("session_id")) {
-      localStorage.setItem("session_id", crypto.randomUUID());
-    }
+    const sessionId = session_id || crypto.randomUUID();
+    setSession(sessionId, trimmedName);
 
     // Go to dashboard
     navigate("/dashboard");

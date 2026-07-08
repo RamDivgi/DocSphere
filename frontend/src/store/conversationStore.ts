@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import type { Conversation, Message } from "../types/conversation";
 
 export interface Toast {
@@ -26,62 +27,72 @@ interface ConversationStore {
     removeToast: (id: string) => void;
 }
 
-export const useConversationStore = create<ConversationStore>((set) => ({
-    conversations: [],
-    selectedConversation: null,
-    messages: [],
-    loading: false,
-    toasts: [],
-
-    setConversations: (conversations) => set({ conversations }),
-
-    addConversation: (conversation) =>
-        set((state) => ({
-            conversations: [conversation, ...state.conversations],
-        })),
-
-    updateConversation: (id, updates) =>
-        set((state) => ({
-            conversations: state.conversations.map((c) =>
-                c.id === id ? { ...c, ...updates } : c
-            ),
-            selectedConversation:
-                state.selectedConversation?.id === id
-                    ? { ...state.selectedConversation, ...updates }
-                    : state.selectedConversation,
-        })),
-
-    setSelectedConversation: (conversation) => set({ selectedConversation: conversation }),
-
-    setMessages: (messages) => set({ messages }),
-
-    addMessage: (message) =>
-        set((state) => ({
-            messages: [...state.messages, message],
-        })),
-
-    clearConversation: () =>
-        set({
+export const useConversationStore = create<ConversationStore>()(
+    persist(
+        (set) => ({
+            conversations: [],
             selectedConversation: null,
             messages: [],
+            loading: false,
+            toasts: [],
+
+            setConversations: (conversations) => set({ conversations }),
+
+            addConversation: (conversation) =>
+                set((state) => ({
+                    conversations: [conversation, ...state.conversations],
+                })),
+
+            updateConversation: (id, updates) =>
+                set((state) => ({
+                    conversations: state.conversations.map((c) =>
+                        c.id === id ? { ...c, ...updates } : c
+                    ),
+                    selectedConversation:
+                        state.selectedConversation?.id === id
+                            ? { ...state.selectedConversation, ...updates }
+                            : state.selectedConversation,
+                })),
+
+            setSelectedConversation: (conversation) => set({ selectedConversation: conversation }),
+
+            setMessages: (messages) => set({ messages }),
+
+            addMessage: (message) =>
+                set((state) => ({
+                    messages: [...state.messages, message],
+                })),
+
+            clearConversation: () =>
+                set({
+                    selectedConversation: null,
+                    messages: [],
+                }),
+
+            setLoading: (loading) => set({ loading }),
+
+            addToast: (message, type) => {
+                const id = crypto.randomUUID();
+                set((state) => ({
+                    toasts: [...state.toasts, { id, message, type }],
+                }));
+                setTimeout(() => {
+                    set((state) => ({
+                        toasts: state.toasts.filter((t) => t.id !== id),
+                    }));
+                }, 4000);
+            },
+
+            removeToast: (id) =>
+                set((state) => ({
+                    toasts: state.toasts.filter((t) => t.id !== id),
+                })),
         }),
-
-    setLoading: (loading) => set({ loading }),
-
-    addToast: (message, type) => {
-        const id = crypto.randomUUID();
-        set((state) => ({
-            toasts: [...state.toasts, { id, message, type }],
-        }));
-        setTimeout(() => {
-            set((state) => ({
-                toasts: state.toasts.filter((t) => t.id !== id),
-            }));
-        }, 4000);
-    },
-
-    removeToast: (id) =>
-        set((state) => ({
-            toasts: state.toasts.filter((t) => t.id !== id),
-        })),
-}));
+        {
+            name: "conversation-store",
+            partialize: (state) => ({
+                selectedConversation: state.selectedConversation,
+            }),
+        }
+    )
+);
