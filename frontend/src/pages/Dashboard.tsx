@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Menu, X, ChevronLeft, ChevronRight, LogOut, Plus, Brain, AlertCircle, CheckCircle2, Info } from "lucide-react";
 
-import { useAuthStore } from "../store/authStore";
 import { useChatStore } from "../store/chatStore";
 import { useConversationStore } from "../store/conversationStore";
+import { useDocumentStore } from "../store/documentStore";
 
 import ConversationSidebar from "../components/ConversationSidebar";
 import DocumentsPanel from "../components/DocumentsPanel";
@@ -13,9 +13,17 @@ import UploadButton from "../components/UploadButton";
 
 export default function Dashboard() {
     const navigate = useNavigate();
-    const logout = useAuthStore((state) => state.logout);
-    const { selectedDocumentId } = useChatStore();
-    const { setSelectedConversation, setMessages, toasts, removeToast, addToast } = useConversationStore();
+    const { selectedDocumentId, clearDocument } = useChatStore();
+    const { setSelectedConversation, setMessages, setConversations, clearConversation, toasts, removeToast, addToast } = useConversationStore();
+
+    // Check session
+    const name = localStorage.getItem("name") || "User";
+
+    useEffect(() => {
+        if (!localStorage.getItem("name") || !localStorage.getItem("session_id")) {
+            navigate("/", { replace: true });
+        }
+    }, [navigate]);
 
     // Responsive layout states
     const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -32,9 +40,18 @@ export default function Dashboard() {
         setMobileSidebarOpen(false); // Close mobile drawer if open
     }
 
-    function handleLogout() {
-        logout();
-        navigate("/login");
+    function handleResetSession() {
+        localStorage.removeItem("name");
+        localStorage.removeItem("session_id");
+
+        // Clear stores state
+        clearDocument();
+        clearConversation();
+        setConversations([]);
+        useDocumentStore.setState({ documents: [] });
+
+        addToast("Session reset successfully.", "info");
+        navigate("/");
     }
 
     return (
@@ -53,9 +70,9 @@ export default function Dashboard() {
                     <span>DocSphere</span>
                 </div>
                 <button
-                    onClick={handleLogout}
+                    onClick={handleResetSession}
                     className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-800 transition"
-                    title="Logout"
+                    title="Reset Session"
                 >
                     <LogOut size={18} />
                 </button>
@@ -91,6 +108,13 @@ export default function Dashboard() {
                     </button>
                 </div>
 
+                <div className="px-4 py-2 bg-slate-900/40 border-b border-slate-800/60 flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-xs text-slate-300 font-medium truncate">
+                        Welcome, {name} 👋
+                    </span>
+                </div>
+
                 <div className="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-thin scrollbar-thumb-slate-800">
                     <ConversationSidebar />
                     <DocumentsPanel />
@@ -105,10 +129,10 @@ export default function Dashboard() {
                     </button>
                     <UploadButton />
                     <button
-                        onClick={handleLogout}
+                        onClick={handleResetSession}
                         className="w-full flex items-center justify-center gap-2 rounded-xl border border-slate-800 bg-slate-900/50 p-3 text-sm font-medium text-red-400 hover:bg-red-500/10 hover:border-red-500/20 transition"
                     >
-                        <LogOut size={16} /> Logout
+                        <LogOut size={16} /> Reset Session
                     </button>
                 </div>
             </aside>
@@ -131,6 +155,13 @@ export default function Dashboard() {
                     </div>
                 </div>
 
+                <div className="px-5 py-2.5 bg-slate-900/40 border-b border-slate-800/60 flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-xs text-slate-300 font-medium truncate">
+                        Welcome, {name} 👋
+                    </span>
+                </div>
+
                 <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6 scrollbar-thin scrollbar-thumb-slate-800">
                     <ConversationSidebar />
                     <DocumentsPanel />
@@ -145,10 +176,10 @@ export default function Dashboard() {
                     </button>
                     <UploadButton />
                     <button
-                        onClick={handleLogout}
+                        onClick={handleResetSession}
                         className="w-full flex items-center justify-center gap-2 rounded-xl border border-slate-800 bg-slate-900/30 py-2.5 text-sm font-medium text-slate-400 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20 transition-all duration-150"
                     >
-                        <LogOut size={16} /> Logout
+                        <LogOut size={16} /> Reset Session
                     </button>
                 </div>
             </aside>

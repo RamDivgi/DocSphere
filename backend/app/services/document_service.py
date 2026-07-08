@@ -8,12 +8,12 @@ class DocumentService:
     @staticmethod
     def create_document(
         db: Session,
-        user_id,
+        session_id,
         metadata: dict,
     ):
 
         document = Document(
-            user_id=user_id,
+            session_id=session_id,
             filename=metadata["filename"],
             stored_filename=metadata["stored_filename"],
             file_size=metadata["file_size"],
@@ -29,12 +29,12 @@ class DocumentService:
     @staticmethod
     def get_documents(
         db: Session,
-        user_id,
+        session_id,
     ):
 
         return (
             db.query(Document)
-            .filter(Document.user_id == user_id)
+            .filter(Document.session_id == session_id)
             .order_by(Document.created_at.desc())
             .all()
         )

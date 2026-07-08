@@ -96,9 +96,16 @@ export default function ChatArea() {
         } catch (err: any) {
             console.error(err);
             
-            // Check for authentication error
-            if (err?.response?.status === 401) {
-                addToast("Session expired. Please log in again.", "error");
+            // Check for session/auth error
+            if (
+                err?.response?.status === 401 ||
+                (err?.response?.status === 400 &&
+                    err?.response?.data?.detail?.includes("session"))
+            ) {
+                addToast("Session expired or invalid. Resetting onboarding...", "error");
+                localStorage.removeItem("name");
+                localStorage.removeItem("session_id");
+                window.location.href = "/";
             } else {
                 addToast("Failed to get response from AI.", "error");
             }
@@ -106,7 +113,7 @@ export default function ChatArea() {
             addMessage({
                 id: crypto.randomUUID(),
                 role: "assistant",
-                content: "Error: Failed to fetch AI answer. Check your connection or authentication.",
+                content: "Error: Failed to fetch AI answer. Check your connection or session.",
                 created_at: new Date().toISOString(),
             });
         } finally {
@@ -199,9 +206,22 @@ export default function ChatArea() {
     }
 
     if (!selectedDocumentId) {
+        const name = localStorage.getItem("name") || "User";
         return (
-            <div className="flex-1 flex flex-col items-center justify-center p-6 bg-[#202123] h-full overflow-y-auto">
-                <div className="max-w-md w-full">
+            <div className="flex-1 flex flex-col items-center justify-center p-6 bg-[#202123] h-full overflow-y-auto relative">
+                {/* Background ambient glow */}
+                <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-blue-600/5 rounded-full blur-[100px] pointer-events-none" />
+                
+                <div className="max-w-md w-full z-10 text-center mb-8">
+                    <h2 className="text-3xl font-extrabold text-white tracking-tight">
+                        Welcome, {name} 👋
+                    </h2>
+                    <p className="text-slate-400 text-sm mt-2">
+                        Select an existing document from the sidebar, or upload a new PDF below to start asking questions.
+                    </p>
+                </div>
+                
+                <div className="max-w-md w-full z-10">
                     <UploadDropzone />
                 </div>
             </div>

@@ -11,13 +11,13 @@ class ConversationService:
     @staticmethod
     def create_conversation(
         db: Session,
-        user_id: UUID,
+        session_id: UUID,
         document_id: UUID,
         title: str = "New Chat",
     ) -> Conversation:
 
         conversation = Conversation(
-            user_id=user_id,
+            session_id=session_id,
             document_id=document_id,
             title=title,
         )
@@ -31,13 +31,13 @@ class ConversationService:
     @staticmethod
     def get_conversations(
         db: Session,
-        user_id: UUID,
+        session_id: UUID,
     ):
 
         return (
             db.query(Conversation)
             .filter(
-                Conversation.user_id == user_id
+                Conversation.session_id == session_id
             )
             .order_by(
                 Conversation.created_at.desc()
@@ -49,12 +49,14 @@ class ConversationService:
     def get_conversation(
         db: Session,
         conversation_id: UUID,
+        session_id: UUID,
     ):
 
         return (
             db.query(Conversation)
             .filter(
-                Conversation.id == conversation_id
+                Conversation.id == conversation_id,
+                Conversation.session_id == session_id
             )
             .first()
         )

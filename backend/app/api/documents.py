@@ -1,10 +1,9 @@
 from fastapi import APIRouter, Depends, File, UploadFile
 from sqlalchemy.orm import Session
+import uuid
 
 from app.db.dependencies import get_db
-from app.core.dependencies import get_current_user
-
-from app.models.user import User
+from app.core.dependencies import get_session_id
 
 from app.services.document_service import DocumentService
 from app.pipelines.document_pipeline import DocumentPipeline
@@ -15,12 +14,12 @@ router = APIRouter()
 @router.get("/")
 def get_documents(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    session_id: uuid.UUID = Depends(get_session_id),
 ):
 
     documents = DocumentService.get_documents(
         db,
-        str(current_user.id),
+        session_id,
     )
 
     return {
@@ -40,13 +39,13 @@ def get_documents(
 async def upload_document(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    session_id: uuid.UUID = Depends(get_session_id),
 ):
 
     document = await DocumentPipeline.process_upload(
         db=db,
         file=file,
-        user_id=str(current_user.id),
+        session_id=session_id,
     )
 
     return {

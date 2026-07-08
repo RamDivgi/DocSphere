@@ -3,10 +3,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_session_id
 from app.db.dependencies import get_db
-
-from app.models.user import User
 
 from app.schemas.conversation import (
     ConversationCreate,
@@ -15,6 +13,7 @@ from app.schemas.conversation import (
 from app.schemas.message import MessageResponse
 
 from app.services.conversation_service import ConversationService
+from app.services.document_service import DocumentService
 
 router = APIRouter()
 
@@ -26,12 +25,20 @@ router = APIRouter()
 def create_conversation(
     payload: ConversationCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    session_id: UUID = Depends(get_session_id),
 ):
+
+    # Verify document belongs to the active session
+    document = DocumentService.get_document(db, payload.document_id)
+    if not document or document.session_id != session_id:
+        raise HTTPException(
+            status_code=404,
+            detail="Document not found",
+        )
 
     return ConversationService.create_conversation(
         db=db,
-        user_id=current_user.id,
+        session_id=session_id,
         document_id=payload.document_id,
         title=payload.title,
     )
@@ -43,12 +50,12 @@ def create_conversation(
 )
 def get_conversations(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    session_id: UUID = Depends(get_session_id),
 ):
 
     return ConversationService.get_conversations(
         db,
-        current_user.id,
+        session_id,
     )
 
 
@@ -59,12 +66,13 @@ def get_conversations(
 def get_messages(
     conversation_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    session_id: UUID = Depends(get_session_id),
 ):
 
     conversation = ConversationService.get_conversation(
         db,
         conversation_id,
+        session_id,
     )
 
     if not conversation:
@@ -83,8 +91,20 @@ def get_messages(
 def delete_conversation(
     conversation_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    session_id: UUID = Depends(get_session_id),
 ):
+
+    conversation = ConversationService.get_conversation(
+        db,
+        conversation_id,
+        session_id,
+    )
+
+    if not conversation:
+        raise HTTPException(
+            status_code=404,
+            detail="Conversation not found",
+        )
 
     ConversationService.delete_conversation(
         db,

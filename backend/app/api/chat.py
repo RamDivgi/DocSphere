@@ -1,10 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from uuid import UUID
 
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_session_id
 from app.db.dependencies import get_db
-
-from app.models.user import User
 
 from app.schemas.chat import (
     ChatRequest,
@@ -14,6 +13,7 @@ from app.schemas.chat import (
 
 from app.services.chat_service import ChatService
 from app.services.conversation_service import ConversationService
+from app.services.document_service import DocumentService
 from app.services.rag_service import RAGService
 
 router = APIRouter()
@@ -26,7 +26,7 @@ router = APIRouter()
 def chat(
     payload: ChatRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    session_id: UUID = Depends(get_session_id),
 ):
 
     # ---------------------------------------
@@ -35,9 +35,17 @@ def chat(
 
     if payload.conversation_id is None:
 
+        # Verify document ownership
+        doc = DocumentService.get_document(db, payload.document_id)
+        if not doc or doc.session_id != session_id:
+            raise HTTPException(
+                status_code=404,
+                detail="Document not found",
+            )
+
         conversation = ConversationService.create_conversation(
             db=db,
-            user_id=current_user.id,
+            session_id=session_id,
             document_id=payload.document_id,
             title="New Chat",
         )
@@ -47,6 +55,7 @@ def chat(
         conversation = ConversationService.get_conversation(
             db,
             payload.conversation_id,
+            session_id,
         )
 
         if not conversation:

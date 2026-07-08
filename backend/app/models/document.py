@@ -17,10 +17,10 @@ class Document(Base):
         default=uuid.uuid4,
     )
 
-    user_id: Mapped[uuid.UUID] = mapped_column(
+    session_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
 
     filename: Mapped[str] = mapped_column(
@@ -55,11 +55,6 @@ class Document(Base):
     )
 
     # Relationships
-    user = relationship(
-        "User",
-        back_populates="documents",
-    )
-
     conversations = relationship(
         "Conversation",
         back_populates="document",

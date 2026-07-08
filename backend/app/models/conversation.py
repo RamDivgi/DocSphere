@@ -24,10 +24,10 @@ class Conversation(Base):
         nullable=False,
     )
 
-    user_id: Mapped[uuid.UUID] = mapped_column(
+    session_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
 
     document_id: Mapped[uuid.UUID] = mapped_column(
@@ -43,10 +43,6 @@ class Conversation(Base):
     )
 
     # Relationships
-    user = relationship(
-        "User",
-        back_populates="conversations",
-    )
 
     document = relationship(
         "Document",

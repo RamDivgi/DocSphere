@@ -18,7 +18,7 @@ class DocumentPipeline:
     async def process_upload(
         db: Session,
         file: UploadFile,
-        user_id,
+        session_id,
     ):
         logger.info(f"--- RAG Ingestion Pipeline Started for file: {file.filename} ---")
 
@@ -35,7 +35,7 @@ class DocumentPipeline:
         # Save metadata to PostgreSQL
         document = DocumentService.create_document(
             db=db,
-            user_id=user_id,
+            session_id=session_id,
             metadata=metadata,
         )
         logger.info(f"[Ingestion] PostgreSQL document record created. ID: {document.id}")

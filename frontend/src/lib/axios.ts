@@ -8,10 +8,10 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-    const token = localStorage.getItem("token");
+    const sessionId = localStorage.getItem("session_id");
 
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+    if (sessionId) {
+        config.headers["X-Session-ID"] = sessionId;
     }
 
     return config;
@@ -20,14 +20,17 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response && error.response.status === 401) {
-            localStorage.removeItem("token");
+        if (
+            error.response &&
+            (error.response.status === 401 ||
+                (error.response.status === 400 &&
+                    error.response.data?.detail?.includes("session")))
+        ) {
+            localStorage.removeItem("name");
+            localStorage.removeItem("session_id");
 
-            if (
-                !window.location.pathname.startsWith("/login") &&
-                !window.location.pathname.startsWith("/signup")
-            ) {
-                window.location.href = "/login";
+            if (window.location.pathname !== "/") {
+                window.location.href = "/";
             }
         }
 
