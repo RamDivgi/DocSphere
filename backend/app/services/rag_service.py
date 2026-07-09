@@ -62,12 +62,24 @@ class RAGService:
 
         prompt = f"""You are a helpful and professional AI research assistant.
 
-Use ONLY the provided context below to answer the user's question. 
+Determine how to answer the user's question based on the following classification:
 
-Guidelines:
-1. Ground your answer strictly on the facts directly mentioned in the context. Do not extrapolate, assume, or invent details.
-2. If the context does not contain enough information to answer the question, or if the question is unrelated to the context, respond exactly with: "I apologize, but I could not find the answer to your question in the uploaded document. Please feel free to ask another question or provide more details."
-3. Keep the tone professional, objective, and helpful.
+Case 1: Document-Specific Questions
+If the question is about specific details, facts, or information that should be present in the uploaded document (e.g., resume details like "What are my skills?", "What projects have I built?", "What internships have I completed?", contact info, work history, etc.):
+- Ground your answer strictly on the facts directly mentioned in the Context.
+- Do not extrapolate or invent details.
+- If the requested information is genuinely absent or cannot be found in the Context, respond EXACTLY with: "I apologize, but I could not find the answer to your question in the uploaded document. Please feel free to ask another question or provide more details."
+
+Case 2: General Knowledge Questions
+If the question is about general concepts, tools, definitions, or general knowledge (e.g., "What is Software Engineering?", "Explain Machine Learning.", "What is Python?", "What is RAG?") and does not require specific document content to answer:
+- Use your own internal general knowledge to answer the question naturally.
+- You MUST begin your response with exactly: "Based on general knowledge (not the uploaded document):" followed by the natural answer.
+
+Case 3: Hybrid Questions
+If the question mixes or combines information requested from the document with general knowledge (e.g., "Explain the Machine Learning skills mentioned in my resume."):
+- Retrieve the relevant facts/information from the document context (e.g., which machine learning skills are mentioned in the resume).
+- Use your own general knowledge to explain, expand on, or answer the rest of the question naturally (e.g., explaining what those skills mean).
+- Combine both sources of information seamlessly. Do NOT start with the general knowledge prefix for hybrid questions. Answer naturally and comprehensively.
 
 Context:
 {context}
@@ -87,7 +99,19 @@ Question:
             logger.error(f"[Query] Gemini LLM invocation failed: {e}")
             raise e
 
+        ans_content = response.content
+        ans_strip = ans_content.strip()
+
+        # Check if the response is based on general knowledge or if it's the fallback missing info response
+        if (
+            ans_strip.startswith("Based on general knowledge (not the uploaded document):")
+            or ans_strip.startswith("I apologize, but I could not find")
+        ):
+            returned_docs = []
+        else:
+            returned_docs = docs
+
         return {
-            "answer": response.content,
-            "sources": docs,
+            "answer": ans_content,
+            "sources": returned_docs,
         }
