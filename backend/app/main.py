@@ -15,8 +15,8 @@ app = FastAPI(
 
 # Allowed frontend origins
 origins = [
-    "http://localhost:5173",              # Local development
-    "https://doc-sphere-mu.vercel.app",   # Production frontend
+    "http://localhost:5173",          # Local development
+    "https://docsphere-ai.vercel.app" # Production frontend
 ]
 
 app.add_middleware(
