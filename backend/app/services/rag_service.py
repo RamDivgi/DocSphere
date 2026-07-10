@@ -2,15 +2,25 @@ import logging
 from app.services.vector_service import VectorService
 from langchain_google_genai import ChatGoogleGenerativeAI
 from app.core.config import settings
+import hashlib
 
 logger = logging.getLogger("app.services.rag_service")
+
 
 
 class RAGService:
 
     def __init__(self):
+
+        logger.info("========== GEMINI DEBUG ==========")
+        logger.info("Model: gemini-flash-latest")
+        logger.info(
+            f"API Key Hash: {hashlib.sha256(settings.GEMINI_API_KEY.encode()).hexdigest()[:12]}"
+        )
+        logger.info("==================================")
+
         self.llm = ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash-lite",
+            model="gemini-flash-latest",
             google_api_key=settings.GEMINI_API_KEY,
             temperature=0.2,
         )
