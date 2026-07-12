@@ -31,3 +31,5 @@ numpy
 pandas
 duckduckgo-search
 langchain-ollama
+langchain-cohere
+cohere
