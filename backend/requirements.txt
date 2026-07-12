@@ -28,4 +28,6 @@ pymupdf
 httpx
 
 numpy
-pandasduckduckgo-search
+pandas
+duckduckgo-search
+langchain-ollama

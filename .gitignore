@@ -1,49 +1,78 @@
+# ==========================
 # Python
+# ==========================
 venv/
 .venv/
 __pycache__/
 *.py[cod]
+*.pyo
 .pytest_cache/
 .python-version
 
-# Node
-node_modules/
-dist/
-
-# Environment
+# ==========================
+# Environment Variables
+# ==========================
 .env
 .env.*
 
+# ==========================
+# Node.js
+# ==========================
+node_modules/
+dist/
+build/
+
+# ==========================
 # IDE
+# ==========================
 .vscode/
 .idea/
 
-# OS
+# ==========================
+# Operating System
+# ==========================
 .DS_Store
 Thumbs.db
 
+# ==========================
 # Logs
+# ==========================
 *.log
 
-# Runtime generated files
-backend/uploads/
-backend/vectorstore/
-backend/faiss_indexes/
-
-# AI / Vector files
-*.faiss
-*.pkl
-
+# ==========================
 # Coverage
+# ==========================
 .coverage
 htmlcov/
 
-# Jupyter
-.ipynb_checkpoints/
+# ==========================
+# Runtime Generated Files
+# ==========================
+backend/uploads/
+backend/vectorstore/
+backend/faiss_indexes/
+backend/storage/
 
-# SQLite
+# ==========================
+# Vector Database / AI Files
+# ==========================
+*.faiss
+*.pkl
+*.index
+
+# ==========================
+# Databases
+# ==========================
 *.db
+*.sqlite
 *.sqlite3
 
-# Ollama (only if present inside project)
+# ==========================
+# Jupyter
+# ==========================
+.ipynb_checkpoints/
+
+# ==========================
+# Ollama (only if inside project)
+# ==========================
 .ollama/
