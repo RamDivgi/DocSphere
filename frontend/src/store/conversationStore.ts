@@ -16,6 +16,7 @@ interface ConversationStore {
     toasts: Toast[];
 
     setConversations: (conversations: Conversation[]) => void;
+    loadConversations: () => Promise<void>;
     addConversation: (conversation: Conversation) => void;
     updateConversation: (id: string, updates: Partial<Conversation>) => void;
     setSelectedConversation: (conversation: Conversation | null) => void;
@@ -29,7 +30,7 @@ interface ConversationStore {
 
 export const useConversationStore = create<ConversationStore>()(
     persist(
-        (set) => ({
+        (set, get) => ({
             conversations: [],
             selectedConversation: null,
             messages: [],
@@ -37,6 +38,27 @@ export const useConversationStore = create<ConversationStore>()(
             toasts: [],
 
             setConversations: (conversations) => set({ conversations }),
+
+            loadConversations: async () => {
+                set({ loading: true });
+                try {
+                    const { getConversations } = await import("../services/conversationService");
+                    const data = await getConversations();
+                    set({ conversations: data, loading: false });
+
+                    // Self-correct stale selected conversation selection on initial load
+                    const activeConv = get().selectedConversation;
+                    if (activeConv) {
+                        const exists = data.some((c) => c.id === activeConv.id);
+                        if (!exists) {
+                            set({ selectedConversation: null, messages: [] });
+                        }
+                    }
+                } catch (err) {
+                    console.error("Failed to load conversations:", err);
+                    set({ loading: false });
+                }
+            },
 
             addConversation: (conversation) =>
                 set((state) => ({

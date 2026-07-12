@@ -4,6 +4,7 @@ venv/
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.python-version
 
 # Node
 node_modules/
@@ -27,25 +28,22 @@ Thumbs.db
 # Runtime generated files
 backend/uploads/
 backend/vectorstore/
+backend/faiss_indexes/
 
-# Optional
+# AI / Vector files
 *.faiss
 *.pkl
-
-# Python
-*.pyc
-*.pyo
-
-# Logs
-*.log
-
-# Build
-dist/
 
 # Coverage
 .coverage
 htmlcov/
 
-# macOS / Windows
-.DS_Store
-Thumbs.db
+# Jupyter
+.ipynb_checkpoints/
+
+# SQLite
+*.db
+*.sqlite3
+
+# Ollama (only if present inside project)
+.ollama/

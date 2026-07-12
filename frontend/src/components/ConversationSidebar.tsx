@@ -16,29 +16,6 @@ export default function ConversationSidebar() {
 
     const { selectedDocumentId } = useChatStore();
 
-    useEffect(() => {
-        async function loadConversations() {
-            try {
-                const data = await getConversations();
-                setConversations(data);
-
-                // Self-correct stale selected conversation selection on initial load
-                const activeConv = useConversationStore.getState().selectedConversation;
-                if (activeConv) {
-                    const exists = data.some((c) => c.id === activeConv.id);
-                    if (!exists) {
-                        setSelectedConversation(null);
-                        setMessages([]);
-                    }
-                }
-            } catch (err) {
-                console.error(err);
-                addToast("Failed to load conversations.", "error");
-            }
-        }
-        loadConversations();
-    }, [setConversations, addToast, setSelectedConversation, setMessages]);
-
     async function openConversation(id: string) {
         const conversation = conversations.find((c) => c.id === id);
         if (!conversation) return;

@@ -18,6 +18,7 @@ class DocumentService:
             stored_filename=metadata["stored_filename"],
             file_size=metadata["file_size"],
             page_count=metadata["page_count"],
+            content=metadata.get("text"),
         )
 
         db.add(document)

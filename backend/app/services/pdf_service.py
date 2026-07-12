@@ -48,11 +48,12 @@ class PDFService:
         text = ""
 
         for page in document:
-            text += page.get_text()
+            text += page.get_text("text") + "\n"
 
         document.close()
+        text = text.replace("\x00", "").strip()
 
-        if not text.strip():
+        if not text:
             try:
                 path.unlink()
             except Exception:

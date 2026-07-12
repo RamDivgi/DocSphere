@@ -25,7 +25,12 @@ export default function Dashboard() {
     useEffect(() => {
         if (!session_id || !session_name) {
             navigate("/", { replace: true });
+            return;
         }
+
+        // Centralized initial data fetch to prevent infinite loops from duplicated components
+        useDocumentStore.getState().loadDocuments();
+        useConversationStore.getState().loadConversations();
     }, [session_id, session_name, navigate]);
 
     // Responsive layout states
@@ -66,7 +71,7 @@ export default function Dashboard() {
 
     return (
         <div className="flex h-screen bg-[#202123] text-white overflow-hidden font-sans relative">
-            
+
             {/* Mobile Header */}
             <div className="md:hidden flex items-center justify-between px-4 py-3 bg-[#171717] border-b border-slate-800 w-full fixed top-0 left-0 right-0 z-20">
                 <button
@@ -248,15 +253,15 @@ export default function Dashboard() {
                                 ${isSuccess
                                     ? "bg-slate-900 border-green-500/30 text-green-400"
                                     : isError
-                                    ? "bg-slate-900 border-red-500/30 text-red-400"
-                                    : "bg-slate-900 border-blue-500/30 text-blue-400"
+                                        ? "bg-slate-900 border-red-500/30 text-red-400"
+                                        : "bg-slate-900 border-blue-500/30 text-blue-400"
                                 }
                             `}
                         >
                             {isSuccess && <CheckCircle2 size={18} className="flex-shrink-0 mt-0.5 text-green-500" />}
                             {isError && <AlertCircle size={18} className="flex-shrink-0 mt-0.5 text-red-500" />}
                             {!isSuccess && !isError && <Info size={18} className="flex-shrink-0 mt-0.5 text-blue-500" />}
-                            
+
                             <div className="flex-1 min-w-0 break-words leading-tight">
                                 {toast.message}
                             </div>

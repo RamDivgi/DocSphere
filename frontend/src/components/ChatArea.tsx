@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { Brain, SendHorizontal, Sparkles, User, FileText } from "lucide-react";
 import UploadDropzone from "./UploadDropzone";
-import { askQuestion } from "../services/chatService";
+import { askQuestion, streamQuestion } from "../services/chatService";
 import { getMessages } from "../services/conversationService";
 import { useChatStore } from "../store/chatStore";
 import { useConversationStore } from "../store/conversationStore";
@@ -25,6 +25,7 @@ export default function ChatArea() {
     } = useConversationStore();
 
     const [question, setQuestion] = useState("");
+    const [activeCitation, setActiveCitation] = useState<{content: string, x: number, y: number} | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     // Auto-scroll to bottom
@@ -81,50 +82,112 @@ export default function ChatArea() {
         };
         addMessage(tempUserMessage);
 
+        const aiMessageId = crypto.randomUUID();
+        const tempAiMessage = {
+            id: aiMessageId,
+            role: "assistant" as const,
+            content: "",
+            created_at: new Date().toISOString(),
+            isStreaming: true,
+            stageMessage: "📄 Reading document...",
+        };
+        addMessage(tempAiMessage);
+
         setLoading(true);
 
         try {
-            // 2. Call backend chat API
-            const response = await askQuestion({
-                conversation_id: selectedConversation ? selectedConversation.id : null,
-                document_id: selectedDocumentId,
-                question: userQuestion,
-            });
-
-            // 3. If it was the first message, a new conversation was created
-            if (!selectedConversation) {
-                addConversation(response.conversation);
-                setSelectedConversation(response.conversation);
-                addToast("New conversation started!", "success");
-            } else {
-                // For existing conversations, fetch the full history to keep it synced
-                const data = await getMessages(selectedConversation.id);
-                setMessages(data);
-            }
+            await streamQuestion(
+                {
+                    conversation_id: selectedConversation ? selectedConversation.id : null,
+                    document_id: selectedDocumentId,
+                    question: userQuestion,
+                },
+                (stage, message) => {
+                    const prev = useConversationStore.getState().messages;
+                    setMessages(
+                        prev.map((msg) =>
+                            msg.id === aiMessageId
+                                ? { ...msg, stageMessage: message }
+                                : msg
+                        )
+                    );
+                },
+                (token) => {
+                    const prev = useConversationStore.getState().messages;
+                    setMessages(
+                        prev.map((msg) =>
+                            msg.id === aiMessageId
+                                ? {
+                                      ...msg,
+                                      content: msg.content + token,
+                                      stageMessage: undefined,
+                                  }
+                                : msg
+                        )
+                    );
+                },
+                async (data) => {
+                    const prev = useConversationStore.getState().messages;
+                    setMessages(
+                        prev.map((msg) =>
+                            msg.id === aiMessageId
+                                ? {
+                                      ...msg,
+                                      content: data.answer,
+                                      isStreaming: false,
+                                      stageMessage: undefined,
+                                      citations: data.citations,
+                                  }
+                                : msg
+                        )
+                    );
+                    if (!selectedConversation) {
+                        addConversation(data.conversation);
+                        setSelectedConversation(data.conversation);
+                        addToast("New conversation started!", "success");
+                    }
+                    setLoading(false);
+                },
+                (errMessage) => {
+                    console.error("Streaming error:", errMessage);
+                    if (errMessage.includes("session") || errMessage.includes("401")) {
+                        addToast("Session expired or invalid. Resetting onboarding...", "error");
+                        localStorage.removeItem("session_name");
+                        localStorage.removeItem("session_id");
+                        window.location.href = "/";
+                    } else {
+                        addToast(errMessage || "Failed to get response from AI.", "error");
+                    }
+                    const prev = useConversationStore.getState().messages;
+                    setMessages(
+                        prev.map((msg) =>
+                            msg.id === aiMessageId
+                                ? {
+                                      ...msg,
+                                      content: `Error: ${errMessage || "Failed to fetch AI answer. Check your connection or session."}`,
+                                      isStreaming: false,
+                                      stageMessage: undefined,
+                                  }
+                                : msg
+                        )
+                    );
+                    setLoading(false);
+                }
+            );
         } catch (err: any) {
             console.error(err);
-            
-            // Check for session/auth error
-            if (
-                err?.response?.status === 401 ||
-                (err?.response?.status === 400 &&
-                    err?.response?.data?.detail?.includes("session"))
-            ) {
-                addToast("Session expired or invalid. Resetting onboarding...", "error");
-                localStorage.removeItem("session_name");
-                localStorage.removeItem("session_id");
-                window.location.href = "/";
-            } else {
-                addToast("Failed to get response from AI.", "error");
-            }
-
-            addMessage({
-                id: crypto.randomUUID(),
-                role: "assistant",
-                content: "Error: Failed to fetch AI answer. Check your connection or session.",
-                created_at: new Date().toISOString(),
-            });
-        } finally {
+            setMessages((prev) =>
+                prev.map((msg) =>
+                    msg.id === aiMessageId
+                        ? {
+                              ...msg,
+                              content: "Error: Failed to fetch AI answer. Check your connection or session.",
+                              isStreaming: false,
+                              stageMessage: undefined,
+                          }
+                        : msg
+                )
+            );
             setLoading(false);
         }
     }
@@ -140,10 +203,30 @@ export default function ChatArea() {
     }
 
     // Markdown Parser
-    function parseInlineMarkdown(text: string) {
-        const regex = /(\*\*.*?\*\*|`.*?`|\*.*?\*)/g;
+    function parseInlineMarkdown(text: string, citations?: { content: string }[]) {
+        const regex = /(\*\*.*?\*\*|`.*?`|\*.*?\*|\[\d+\])/g;
         const parts = text.split(regex);
         return parts.map((part, idx) => {
+            const citationMatch = part.match(/^\[(\d+)\]$/);
+            if (citationMatch) {
+                const index = parseInt(citationMatch[1], 10) - 1;
+                const cit = citations?.[index];
+                if (cit) {
+                    return (
+                        <button
+                            key={idx}
+                            onClick={(e) => {
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                setActiveCitation({ content: cit.content, x: rect.left, y: rect.bottom });
+                            }}
+                            className="inline-flex items-center justify-center text-[10px] font-bold bg-blue-500/20 text-blue-400 hover:bg-blue-500/40 hover:text-blue-300 rounded-sm px-1.5 mx-0.5 leading-none h-4 -translate-y-1 transition-colors cursor-pointer"
+                        >
+                            {citationMatch[1]}
+                        </button>
+                    );
+                }
+                return part;
+            }
             if (part.startsWith("**") && part.endsWith("**")) {
                 return <strong key={idx} className="font-semibold text-white">{part.slice(2, -2)}</strong>;
             }
@@ -157,7 +240,7 @@ export default function ChatArea() {
         });
     }
 
-    function renderMarkdown(text: string) {
+    function renderMarkdown(text: string, citations?: { content: string }[]) {
         if (!text) return null;
         const parts = text.split(/(```[\s\S]*?```)/g);
 
@@ -187,26 +270,26 @@ export default function ChatArea() {
                 <div key={index} className="space-y-3">
                     {lines.map((line, lIdx) => {
                         if (line.startsWith("### ")) {
-                            return <h4 key={lIdx} className="text-base font-bold text-white mt-4 mb-2">{parseInlineMarkdown(line.slice(4))}</h4>;
+                            return <h4 key={lIdx} className="text-base font-bold text-white mt-4 mb-2">{parseInlineMarkdown(line.slice(4), citations)}</h4>;
                         }
                         if (line.startsWith("## ")) {
-                            return <h3 key={lIdx} className="text-lg font-bold text-white mt-5 mb-3 border-b border-slate-800 pb-1">{parseInlineMarkdown(line.slice(3))}</h3>;
+                            return <h3 key={lIdx} className="text-lg font-bold text-white mt-5 mb-3 border-b border-slate-800 pb-1">{parseInlineMarkdown(line.slice(3), citations)}</h3>;
                         }
                         if (line.startsWith("# ")) {
-                            return <h2 key={lIdx} className="text-xl font-bold text-white mt-6 mb-4">{parseInlineMarkdown(line.slice(2))}</h2>;
+                            return <h2 key={lIdx} className="text-xl font-bold text-white mt-6 mb-4">{parseInlineMarkdown(line.slice(2), citations)}</h2>;
                         }
                         if (line.trim().startsWith("- ") || line.trim().startsWith("* ")) {
                             const content = line.trim().slice(2);
                             return (
                                 <ul key={lIdx} className="list-disc list-inside pl-4 text-slate-300 space-y-1">
-                                    <li className="text-sm">{parseInlineMarkdown(content)}</li>
+                                    <li className="text-sm">{parseInlineMarkdown(content, citations)}</li>
                                 </ul>
                             );
                         }
                         if (line.trim() === "") {
                             return <div key={lIdx} className="h-1.5"></div>;
                         }
-                        return <p key={lIdx} className="text-sm text-slate-300 leading-relaxed">{parseInlineMarkdown(line)}</p>;
+                        return <p key={lIdx} className="text-sm text-slate-300 leading-relaxed">{parseInlineMarkdown(line, citations)}</p>;
                     })}
                 </div>
             );
@@ -312,9 +395,21 @@ export default function ChatArea() {
                                     {isUser ? (
                                         <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
                                     ) : (
-                                        <div className="markdown-body">
-                                            {renderMarkdown(message.content)}
-                                        </div>
+                                        message.isStreaming && !message.content ? (
+                                            <div className="flex items-center gap-3 py-1 px-1 text-blue-400 font-medium text-sm animate-pulse">
+                                                <div className="flex gap-1 items-center">
+                                                    <span className="w-2 h-2 bg-blue-400 rounded-full animate-ping"></span>
+                                                </div>
+                                                <span>{message.stageMessage || "📄 Reading document..."}</span>
+                                            </div>
+                                        ) : (
+                                            <div className="markdown-body">
+                                                {renderMarkdown(message.content, message.citations)}
+                                                {message.isStreaming && (
+                                                    <span className="inline-block w-2 h-4 ml-1 bg-blue-400 animate-pulse align-middle rounded-xs"></span>
+                                                )}
+                                            </div>
+                                        )
                                     )}
                                 </div>
                                 <span className={`text-[10px] text-slate-500 ${isUser ? "self-end" : "self-start"}`}>
@@ -331,8 +426,8 @@ export default function ChatArea() {
                     );
                 })}
 
-                {/* Animated Typing / Loading Indicator */}
-                {loading && (
+                {/* Animated Typing / Loading Indicator (when not actively streaming inside a bubble) */}
+                {loading && !messages.some((m) => m.isStreaming) && (
                     <div className="flex gap-4 justify-start">
                         <div className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center text-white flex-shrink-0 border border-blue-500 animate-pulse">
                             <Sparkles size={14} />
@@ -412,6 +507,20 @@ export default function ChatArea() {
                     </span>
                 </div>
             </div>
+
+            {/* Citation Popover */}
+            {activeCitation && (
+                <>
+                    <div className="fixed inset-0 z-40" onClick={() => setActiveCitation(null)} />
+                    <div 
+                        className="fixed z-50 w-72 bg-[#2f2f2f] border border-slate-700/50 rounded-xl shadow-2xl p-4 text-sm text-slate-200 transition-opacity"
+                        style={{ top: Math.min(activeCitation.y + 10, window.innerHeight - 150), left: Math.min(activeCitation.x - 140, window.innerWidth - 300) }}
+                    >
+                        <div className="font-semibold text-white mb-2 text-[10px] uppercase tracking-wider text-slate-400 border-b border-slate-700/50 pb-1.5">Source Snippet</div>
+                        <p className="italic leading-relaxed">"... {activeCitation.content} ..."</p>
+                    </div>
+                </>
+            )}
         </div>
     );
 }

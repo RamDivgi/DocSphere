@@ -5,7 +5,7 @@ from app.services.pdf_service import PDFService
 from app.services.chunk_service import ChunkService
 from app.services.vector_service import VectorService
 from app.services.document_service import DocumentService
-
+from app.models.document import Document
 
 import logging
 
@@ -21,6 +21,25 @@ class DocumentPipeline:
         session_id,
     ):
         logger.info(f"--- RAG Ingestion Pipeline Started for file: {file.filename} ---")
+
+        # Read content once to check for duplicate before expensive extraction & embedding
+        content = await file.read()
+        file_size = len(content)
+        await file.seek(0)
+
+        existing = (
+            db.query(Document)
+            .filter(
+                Document.session_id == session_id,
+                Document.filename == file.filename,
+                Document.file_size == file_size,
+            )
+            .first()
+        )
+
+        if existing:
+            logger.info(f"[Ingestion] Document '{file.filename}' (size: {file_size}) already exists for session (ID: {existing.id}). Skipping duplicate extraction & embedding!")
+            return existing
 
         # Save PDF and extract text
         metadata = await PDFService.save_pdf(file)

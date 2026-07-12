@@ -10,4 +10,7 @@ export interface Message {
     role: "user" | "assistant";
     content: string;
     created_at: string;
+    isStreaming?: boolean;
+    stageMessage?: string;
+    citations?: { content: string; score: number }[];
 }

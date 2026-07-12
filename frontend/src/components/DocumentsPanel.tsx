@@ -8,17 +8,12 @@ export default function DocumentsPanel() {
 
     const {
         documents,
-        loadDocuments,
     } = useDocumentStore();
 
     const {
         selectedDocumentId,
         setSelectedDocument,
     } = useChatStore();
-
-    useEffect(() => {
-        loadDocuments();
-    }, [loadDocuments]);
 
     return (
 

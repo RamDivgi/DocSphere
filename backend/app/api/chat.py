@@ -1,4 +1,6 @@
+import json
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from uuid import UUID
 
@@ -10,6 +12,7 @@ from app.schemas.chat import (
     ChatResponse,
     Citation,
 )
+from app.schemas.conversation import ConversationResponse
 
 from app.services.chat_service import ChatService
 from app.services.conversation_service import ConversationService
@@ -84,6 +87,7 @@ def chat(
     result = rag.ask(
         str(conversation.document_id),
         payload.question,
+        db=db,
     )
 
     # ---------------------------
@@ -120,7 +124,69 @@ def chat(
         )
 
     return ChatResponse(
-    conversation=conversation,
-    answer=result["answer"],
-    citations=citations,
-)
+        conversation=conversation,
+        answer=result["answer"],
+        citations=citations,
+    )
+
+
+@router.post("/stream")
+async def chat_stream(
+    payload: ChatRequest,
+    db: Session = Depends(get_db),
+    session_id: UUID = Depends(get_session_id),
+):
+    if payload.conversation_id is None:
+        doc = DocumentService.get_document(db, payload.document_id)
+        if not doc or doc.session_id != session_id:
+            raise HTTPException(status_code=404, detail="Document not found")
+
+        conversation = ConversationService.create_conversation(
+            db=db,
+            session_id=session_id,
+            document_id=payload.document_id,
+            title="New Chat",
+        )
+    else:
+        conversation = ConversationService.get_conversation(
+            db,
+            payload.conversation_id,
+            session_id,
+        )
+        if not conversation:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+
+    ChatService.save_user_message(db, conversation.id, payload.question)
+
+    async def event_generator():
+        rag = RAGService()
+        try:
+            async for event in rag.astream_ask(str(conversation.document_id), payload.question, db=db):
+                if event["stage"] == "done":
+                    ChatService.save_ai_message(db, conversation.id, event["answer"])
+                    if conversation.title == "New Chat":
+                        updated_conv = ConversationService.update_title(db, conversation.id, payload.question[:50])
+                        if updated_conv:
+                            conv_dict = ConversationResponse.model_validate(updated_conv).model_dump(mode='json')
+                        else:
+                            conv_dict = ConversationResponse.model_validate(conversation).model_dump(mode='json')
+                    else:
+                        conv_dict = ConversationResponse.model_validate(conversation).model_dump(mode='json')
+
+                    citations = [
+                        Citation(content=src["page_content"][:150], score=1.0).model_dump(mode='json')
+                        for src in event["sources"]
+                    ]
+                    yield json.dumps({
+                        "stage": "done",
+                        "conversation": conv_dict,
+                        "answer": event["answer"],
+                        "citations": citations,
+                    }) + "\n"
+                else:
+                    yield json.dumps(event) + "\n"
+        except Exception as e:
+            err_msg = str(e)
+            yield json.dumps({"stage": "error", "error": err_msg}) + "\n"
+
+    return StreamingResponse(event_generator(), media_type="application/x-ndjson")

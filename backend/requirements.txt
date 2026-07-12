@@ -28,4 +28,4 @@ pymupdf
 httpx
 
 numpy
-pandas
+pandasduckduckgo-search

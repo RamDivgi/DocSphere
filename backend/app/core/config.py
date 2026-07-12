@@ -21,6 +21,10 @@ class Settings(BaseSettings):
 
     # AI
     GEMINI_API_KEY: str = ""
+    COHERE_API_KEY: str = ""   # <-- ADD THIS
+    LLM_PROVIDER: str = "auto"
+    OLLAMA_MODEL: str = "llama3.2"
+    GEMINI_CHAT_MODEL: str = "models/gemini-2.0-flash"
 
     @property
     def DATABASE_URL(self) -> str:
@@ -35,6 +39,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
         case_sensitive=True,
+        extra="ignore",          # <-- ADD THIS
     )
 
 

@@ -49,6 +49,11 @@ class Document(Base):
         nullable=True,
     )
 
+    content: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
     created_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

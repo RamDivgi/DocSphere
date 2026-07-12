@@ -37,13 +37,15 @@ def delete_session(
                 except Exception as e:
                     print(f"Error deleting PDF file {pdf_path}: {e}")
 
-            # Delete FAISS vectorstore folder
+            # Delete FAISS vectorstore folder and memory cache
             vector_path = VECTOR_DIR / str(doc.id)
             if vector_path.exists():
                 try:
                     shutil.rmtree(vector_path)
                 except Exception as e:
                     print(f"Error deleting vectorstore folder {vector_path}: {e}")
+            from app.services.vector_service import VectorService
+            VectorService._INDEX_CACHE.pop(str(doc.id), None)
 
         # 3. Delete database rows (cascade deletes messages and conversations automatically)
         for doc in documents:

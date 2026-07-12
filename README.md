@@ -1,4 +1,4 @@
-﻿# 🚀 DocSphere – AI-Powered Document Intelligence Platform
+# 🚀 DocSphere – AI-Powered Document Intelligence Platform
 
 DocSphere is a production-ready AI document assistant that enables users to upload PDF documents and interact with them through natural language conversations. Built using Retrieval-Augmented Generation (RAG), it combines semantic search with Google Gemini to deliver accurate, context-aware answers grounded in the uploaded document.
 
@@ -50,7 +50,8 @@ DocSphere is a production-ready AI document assistant that enables users to uplo
 
 - Google Gemini 2.5 Flash
 - Google Gemini Embedding-001
-- LangChain
+- Ollama (llama3.2 for local inference)
+- LangChain / LangChain Ollama
 - FAISS
 - PyMuPDF (fitz)
 
@@ -73,13 +74,14 @@ DocSphere is a production-ready AI document assistant that enables users to uplo
                    │
      ┌─────────────┼──────────────┐
      │             │              │
- PostgreSQL      FAISS        Gemini API
-   (Neon)     Vector Store   2.5 Flash LLM
+ PostgreSQL      FAISS        LLM Factory
+   (Neon)     Vector Store    (Router)
      │             │              │
-     └─────────────┼──────────────┘
-                   │
-                   ▼
-         Context-Aware AI Response
+     └─────────────┼──────────────┴──────────────┐
+                   │                             │
+                   ▼                             ▼
+             Gemini 2.5 Flash               Ollama (Local)
+             (Primary LLM)                  (Fallback)
 ```
 
 ---
@@ -119,9 +121,10 @@ For every question:
 1. Load the document's FAISS index.
 2. Retrieve the most relevant chunks using Maximal Marginal Relevance (MMR).
 3. Build a contextual prompt.
-4. Send prompt to Gemini 2.5 Flash.
-5. Generate a grounded response.
-6. Save the conversation in PostgreSQL.
+4. Send prompt to `LLMFactory`.
+5. Try `Gemini 2.5 Flash`. If rate-limited or offline, automatically fallback to `Ollama`.
+6. Generate a grounded response and stream to the frontend.
+7. Save the conversation in PostgreSQL.
 
 ---
 
@@ -228,6 +231,9 @@ DATABASE_URL=
 SECRET_KEY=
 
 GEMINI_API_KEY=
+LLM_PROVIDER=auto
+OLLAMA_MODEL=llama3.2
+GEMINI_CHAT_MODEL=models/gemini-2.0-flash
 ```
 
 ## Frontend
