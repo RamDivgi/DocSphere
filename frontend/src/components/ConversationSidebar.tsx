@@ -1,6 +1,6 @@
-import { useEffect } from "react";
+
 import { MessageSquare, Trash2 } from "lucide-react";
-import { getConversations, getMessages, deleteConversation as deleteConversationApi } from "../services/conversationService";
+import { getMessages, deleteConversation as deleteConversationApi } from "../services/conversationService";
 import { useConversationStore } from "../store/conversationStore";
 import { useChatStore } from "../store/chatStore";
 

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+
 import { FileText } from "lucide-react";
 
 import { useChatStore } from "../store/chatStore";

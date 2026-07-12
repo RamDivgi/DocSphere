@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { Brain, SendHorizontal, Sparkles, User, FileText } from "lucide-react";
 import UploadDropzone from "./UploadDropzone";
-import { askQuestion, streamQuestion } from "../services/chatService";
+import { streamQuestion } from "../services/chatService";
 import { getMessages } from "../services/conversationService";
 import { useChatStore } from "../store/chatStore";
 import { useConversationStore } from "../store/conversationStore";
@@ -102,7 +102,7 @@ export default function ChatArea() {
                     document_id: selectedDocumentId,
                     question: userQuestion,
                 },
-                (stage, message) => {
+                (_stage, message) => {
                     const prev = useConversationStore.getState().messages;
                     setMessages(
                         prev.map((msg) =>
@@ -176,7 +176,8 @@ export default function ChatArea() {
             );
         } catch (err: any) {
             console.error(err);
-            setMessages((prev) =>
+            const prev = useConversationStore.getState().messages;
+            setMessages(
                 prev.map((msg) =>
                     msg.id === aiMessageId
                         ? {
